@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07111f">
+<title>LineGuard Dashboard</title>
+<style>
+:root{
+  --bg:#07111f;--panel:#0e1a2b;--panel2:#122238;--text:#e6f1ff;--muted:#8ba3bd;
+  --line:#1e3a5f;--accent:#22d3ee;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--gray:#64748b;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;min-height:100vh;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;color:var(--text);
+  background:radial-gradient(circle at 10% 0%,#0d243d 0%,var(--bg) 42%,#040a12 100%);
+  background-attachment:fixed}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;
+  padding:18px clamp(14px,4vw,32px);border-bottom:1px solid rgba(34,211,238,.14);
+  background:rgba(7,17,31,.82);backdrop-filter:blur(12px)}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:46px;height:46px;display:grid;place-items:center;border-radius:12px;
+  border:1px solid rgba(34,211,238,.45);
+  background:linear-gradient(135deg,rgba(34,211,238,.22),rgba(34,197,94,.08)),var(--panel);
+  color:var(--accent);font-weight:800;letter-spacing:.06em;font-size:.9rem}
+h1{margin:0;font-size:1.2rem;letter-spacing:.02em}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:.76rem}
+.conn-status{padding:6px 11px;border-radius:99px;font-size:.72rem;font-weight:700;letter-spacing:.04em;
+  border:1px solid var(--line);background:var(--panel)}
+.conn-status.connected{color:#86efac;border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.12)}
+.conn-status.connecting{color:#fde68a;border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.12)}
+.conn-status.disconnected,.conn-status.error{color:#cbd5e1;border-color:rgba(100,116,139,.5);background:rgba(100,116,139,.12)}
+main{display:grid;grid-template-columns:1fr;gap:14px;max-width:1180px;margin:0 auto;padding:clamp(14px,3vw,28px)}
+@media(min-width:900px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}}
+.card{border:1px solid var(--line);border-radius:var(--radius);
+  background:linear-gradient(180deg,rgba(18,34,56,.92),rgba(10,23,39,.96));
+  box-shadow:0 12px 30px rgba(0,0,0,.25);padding:clamp(14px,2.5vw,20px);min-width:0}
+.head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.head h2{margin:0;font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:#c7e7f5}
+.pill{padding:4px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted);
+  background:rgba(7,17,31,.45);font-size:.68rem;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.muted{color:var(--muted);line-height:1.5;font-size:.85rem}
+.small{font-size:.78rem}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button{appearance:none;border:1px solid transparent;border-radius:9px;padding:10px 14px;
+  font:inherit;font-weight:700;font-size:.82rem;cursor:pointer;transition:transform .1s,background .18s,border-color .18s}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.42;cursor:not-allowed}
+.primary{color:#04202a;background:linear-gradient(135deg,#67e8f9,#22d3ee);box-shadow:0 8px 18px rgba(34,211,238,.18)}
+.secondary{color:#c7e7f5;background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.38)}
+.ghost{color:var(--muted);background:transparent;border-color:var(--line)}
+.status{min-height:1.1em;margin:8px 0 0;color:var(--muted);font-size:.78rem;line-height:1.5}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.meta-label{display:block;margin-bottom:3px;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.1em}
+.meta-value{font-weight:700;font-size:.9rem;word-break:break-word}
+.live{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+.voltage{font-size:clamp(2.6rem,12vw,5rem);line-height:.95;font-weight:800;letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums;transition:opacity .2s}
+.voltage.stale{opacity:.5}
+.badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:7px;
+  border:1px solid var(--line);font-size:.7rem;font-weight:800;letter-spacing:.05em;white-space:nowrap}
+.state-normal{color:#86efac;background:rgba(34,197,94,.13);border-color:rgba(34,197,94,.42)}
+.state-warning{color:#fde68a;background:rgba(245,158,11,.13);border-color:rgba(245,158,11,.46)}
+.state-critical{color:#fecaca;background:rgba(239,68,68,.13);border-color:rgba(239,68,68,.46)}
+.state-offline{color:#cbd5e1;background:rgba(100,116,139,.14);border-color:rgba(100,116,139,.44)}
+.gauge{height:11px;margin-top:18px;border-radius:99px;overflow:hidden;background:#13263d;border:1px solid rgba(34,211,238,.1)}
+.gauge-fill{width:0%;height:100%;border-radius:inherit;background:var(--gray);transition:width .35s,background .25s}
+.gauge-fill.stale{opacity:.4}
+.gauge-labels{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:.66rem}
+.live-sub{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.alert-panel{border-left:4px solid var(--gray)}
+.alert-panel.alert-normal{border-left-color:var(--green)}
+.alert-panel.alert-warning{border-left-color:var(--amber)}
+.alert-panel.alert-critical{border-left-color:var(--red)}
+.alert-title{margin:0 0 6px;font-size:1rem;letter-spacing:.02em}
+.alert-msg{margin:0;line-height:1.55;font-size:.9rem}
+.alert-meta{margin:12px 0 0;color:var(--muted);font-size:.78rem;line-height:1.5;word-break:break-word}
+.loc-block+.loc-block{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.loc-block h3{margin:0 0 6px;font-size:.88rem;color:#c7e7f5}
+label.field{display:block;margin:12px 0 6px;color:var(--muted);font-size:.74rem;font-weight:700}
+input{width:100%;border:1px solid var(--line);border-radius:9px;background:rgba(7,17,31,.55);
+  color:var(--text);padding:10px 11px;font:inherit;font-size:.86rem;outline:none}
+input:focus{border-color:rgba(34,211,238,.6);box-shadow:0 0 0 3px rgba(34,211,238,.1)}
+.history{list-style:none;margin:10px 0 0;padding:0;max-height:280px;overflow:auto;display:grid;gap:8px}
+.history li{padding:10px 11px;border:1px solid var(--line);border-radius:9px;
+  background:rgba(7,17,31,.42);font-size:.76rem;line-height:1.45}
+.history .h-state{font-weight:800;font-size:.72rem;letter-spacing:.04em}
+.history .h-when{color:var(--muted);font-size:.7rem}
+.config-grid{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:600px){.config-grid{grid-template-columns:1fr 1fr}}
+.config-grid label{display:grid;gap:5px;color:var(--muted);font-size:.74rem;font-weight:700}
+.check{display:flex;gap:8px;align-items:flex-start;margin-top:12px;color:var(--muted);font-size:.78rem;line-height:1.45}
+.check input{margin-top:2px;accent-color:var(--accent)}
+pre{background:#050d18;border:1px solid var(--line);border-radius:9px;padding:12px;
+  color:#a7d8ea;font-size:.72rem;line-height:1.5;max-height:260px;overflow:auto;margin:0}
+footer{max-width:1180px;margin:0 auto;padding:0 clamp(14px,3vw,28px) 28px;
+  color:var(--muted);font-size:.74rem;line-height:1.55}
+footer strong{color:#c7e7f5}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);padding:10px 16px;
+  background:#0e1a2b;border:1px solid var(--line);border-radius:9px;font-size:.82rem;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:99}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark">LG</div>
+    <div>
+      <h1>LineGuard</h1>
+      <p>Pole-level voltage monitor</p>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+    <span id="headerDevice" class="muted" style="font-size:.72rem">No device</span>
+    <span id="connStatus" class="conn-status disconnected">Disconnected</span>
+  </div>
+</header>
+
+<main>
+
+  <section class="card wide">
+    <div class="head"><h2>Connection</h2><span class="pill">BLE</span></div>
+    <p class="muted">Connect to a LineGuard ESP32 node. Android Chrome is the primary target. Requires HTTPS or localhost.</p>
+    <div class="row">
+      <button id="btnConnect" class="primary">Connect to LineGuard Node</button>
+      <button id="btnReconnect" class="secondary" disabled>Reconnect</button>
+      <button id="btnDisconnect" class="ghost" disabled>Disconnect</button>
+    </div>
+    <p id="connMsg" class="status"></p>
+    <div class="meta">
+      <div><span class="meta-label">Pole</span><span id="poleDisp" class="meta-value">Pole —</span></div>
+      <div><span class="meta-label">Device</span><span id="devIdDisp" class="meta-value">Device ID: —</span></div>
+    </div>
+  </section>
+
+  <section class="card wide">
+    <div class="head"><h2>Live measurement</h2><span id="nodeStatus" class="pill">Waiting for BLE</span></div>
+    <div class="live">
+      <div>
+        <div id="voltage" class="voltage stale">— V</div>
+        <div class="live-sub">
+          <span id="stateBadge" class="badge state-offline">NODE OFFLINE</span>
+          <span id="staleFlag" class="muted small">No data</span>
+        </div>
+      </div>
+    </div>
+    <div class="gauge"><div id="gaugeFill" class="gauge-fill stale"></div></div>
+    <div class="gauge-labels"><span>0 V</span><span>5 V</span><span>10 V</span><span>15 V</span></div>
+    <p class="muted small" style="margin-top:10px">Last telemetry: <span id="lastUpdate">—</span></p>
+  </section>
+
+  <section class="card alert-panel alert-offline" id="alertPanel">
+    <div class="head"><h2>Alert</h2><span class="pill">Classification</span></div>
+    <h3 id="alertTitle" class="alert-title">NODE OFFLINE</h3>
+    <p id="alertMsg" class="alert-msg">Waiting for BLE connection.</p>
+    <p id="alertMeta" class="alert-meta"></p>
+    <div class="row">
+      <button id="btnCopy" class="secondary">Copy Alert</button>
+      <button id="btnShare" class="secondary">Share Alert</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="head"><h2>Location</h2><span class="pill">On-device only</span></div>
+
+    <div class="loc-block">
+      <h3>General area (phone)</h3>
+      <p class="muted small">Approximate phone location is requested only when you tap the button. Not uploaded anywhere by this prototype.</p>
+      <button id="btnArea" class="secondary">Get approximate area</button>
+      <p id="areaStatus" class="status">Location not requested.</p>
+      <label class="field" for="manualArea">Manual area name (fallback)</label>
+      <input id="manualArea" type="text" placeholder="e.g. Industrial Estate, Sector 3" autocomplete="off">
+    </div>
+
+    <div class="loc-block">
+      <h3>Registered unit location</h3>
+      <p id="regLoc" class="meta-value">Not configured.</p>
+      <p class="muted small">Coordinates stored on the ESP32 via configuration. No GPS hardware on the prototype.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="head"><h2>Recent alert history</h2><span class="pill">Stored on phone</span></div>
+    <div class="row">
+      <button id="btnClearHist" class="ghost">Clear history</button>
+      <button id="btnExportCsv" class="secondary">Export CSV</button>
+    </div>
+    <ul id="historyList" class="history"><li class="muted">No recent alerts.</li></ul>
+  </section>
+
+  <section class="card wide">
+    <div class="head"><h2>Node configuration</h2><span class="pill">Protected write</span></div>
+    <p class="muted small">Writes require <code>commit:true</code> and the confirmation checkbox. Stored in ESP32 NVS.</p>
+    <div class="config-grid">
+      <label>Device ID<input id="cDev" type="text" maxlength="24"></label>
+      <label>Pole number<input id="cPole" type="text" maxlength="16"></label>
+      <label>Calibration factor<input id="cCal" type="number" step="0.001" min="0.5" max="1.5"></label>
+      <label>Normal threshold (V)<input id="cVn" type="number" step="0.1"></label>
+      <label>Warning threshold (V)<input id="cVw" type="number" step="0.1"></label>
+      <label>Critical threshold (V)<input id="cVc" type="number" step="0.1"></label>
+      <label>Hysteresis (V)<input id="cHys" type="number" step="0.05" min="0" max="2"></label>
+      <label>Debounce (ms)<input id="cDeb" type="number" step="100" min="500" max="60000"></label>
+      <label>Registered latitude<input id="cLat" type="number" step="0.000001" min="-90" max="90"></label>
+      <label>Registered longitude<input id="cLon" type="number" step="0.000001" min="-180" max="180"></label>
+    </div>
+    <label class="check"><input id="cConfirm" type="checkbox"> I understand this writes persistent configuration to the connected node.</label>
+    <div class="row">
+      <button id="btnApply" class="primary">Apply configuration</button>
+      <button id="btnClearLoc" class="ghost">Clear registered location</button>
+    </div>
+    <p id="cfgStatus" class="status"></p>
+  </section>
+
+  <section class="card wide">
+    <details>
+      <summary class="head" style="cursor:pointer;margin:0"><h2 style="display:inline">Latest telemetry JSON</h2><span class="pill">Debug</span></summary>
+      <pre id="rawJson" style="margin-top:10px">{}</pre>
+    </details>
+  </section>
+
+</main>
+
+<footer>
+  <p><strong>Safety:</strong> Prototype for isolated low-voltage DC testing only. Never connect to utility mains, overhead distribution lines, or hazardous sources.</p>
+  <p>Voltage-only alerts cannot confirm a cut conductor, short circuit, or sensor fault. Use approved electrical safety procedures.</p>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+const SERVICE_UUID        = "6c1b0001-7a3c-4f9e-9b2a-1d4e5f6a7b80";
+const CHAR_DEVICE_ID_UUID = "6c1b0002-7a3c-4f9e-9b2a-1d4e5f6a7b80";
+const CHAR_POLE_UUID      = "6c1b0003-7a3c-4f9e-9b2a-1d4e5f6a7b80";
+const CHAR_TELEMETRY_UUID = "6c1b0004-7a3c-4f9e-9b2a-1d4e5f6a7b80";
+const CHAR_CONFIG_UUID    = "6c1b0005-7a3c-4f9e-9b2a-1d4e5f6a7b80";
+
+const STALE_MS = 15000;
+const HIST_KEY = "lineguard.history.v1";
+const AREA_KEY = "lineguard.area.v1";
+
+const META = {
+  NORMAL:                  { label:"NORMAL",                 color:"#22c55e", badge:"state-normal",   alert:"alert-normal",   msg:"Voltage within expected range." },
+  WARNING:                 { label:"WARNING",                color:"#f59e0b", badge:"state-warning",  alert:"alert-warning",  msg:"Low-voltage condition." },
+  CRITICAL_UNDERVOLTAGE:   { label:"CRITICAL UNDERVOLTAGE",  color:"#ef4444", badge:"state-critical", alert:"alert-critical", msg:"Severe undervoltage. Possible supply loss or line interruption; inspection required." },
+  SUPPLY_LOSS:             { label:"SUPPLY LOSS",            color:"#dc2626", badge:"state-critical", alert:"alert-critical", msg:"Possible supply loss or line interruption; inspection required." },
+  NODE_OFFLINE:            { label:"NODE OFFLINE",           color:"#64748b", badge:"state-offline",  alert:"alert-offline",  msg:"No fresh telemetry." }
+};
+
+const S = {
+  device:null, server:null, svc:null,
+  deviceIdChar:null, poleChar:null, telemetryChar:null, configChar:null,
+  connected:false,
+  lastTelemetry:null, lastTelemetryAt:0, staleTimer:null,
+  lastRecordedState:null,
+  history:[]
+};
+
+const rx = { msgId:null, total:0, parts:[], count:0 };
+
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, ms=3000){
+  const t = $("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove("on"), ms);
+}
+
+function setConnStatus(text, kind){
+  const el = $("connStatus");
+  el.textContent = text;
+  el.className = "conn-status " + (kind||"");
+}
+
+function setVoltage(v, stale){
+  const el = $("voltage");
+  el.textContent = (v == null ? "—" : v.toFixed(2)) + " V";
+  el.classList.toggle("stale", !!stale);
+  const fill = $("gaugeFill");
+  if (v == null){
+    fill.style.width = "0%";
+    fill.style.background = "var(--gray)";
+    fill.classList.add("stale");
+  } else {
+    const pct = Math.max(0, Math.min(100, (v/15)*100));
+    fill.style.width = pct + "%";
+    const color = v >= 10 ? "var(--green)" : v >= 8 ? "var(--amber)" : "var(--red)";
+    fill.style.background = color;
+    fill.classList.remove("stale");
+  }
+}
+
+function setStateBadge(state, note){
+  const m = META[state] || META.NODE_OFFLINE;
+  const b = $("stateBadge");
+  b.textContent = m.label;
+  b.className = "badge " + m.badge;
+  $("nodeStatus").textContent = state === "NODE_OFFLINE" ? "Offline" : "Live";
+  $("staleFlag").textContent = note || "";
+}
+
+function setAlertPanel(state, voltage, eventTime){
+  const m = META[state] || META.NODE_OFFLINE;
+  const panel = $("alertPanel");
+  panel.className = "card alert-panel " + m.alert;
+  $("alertTitle").textContent = m.label;
+  $("alertMsg").textContent = m.msg;
+
+  const d = S.lastTelemetry || {};
+  const voltTxt = (typeof voltage === "number") ? voltage.toFixed(2)+" V" : "—";
+  const timeTxt = eventTime ? new Date(eventTime).toLocaleString()
+                            : (S.lastTelemetryAt ? new Date(S.lastTelemetryAt).toLocaleString() : "—");
+
+  $("alertMeta").innerHTML =
+    "Pole: <strong>"+escapeHtml(d.pole||"—")+"</strong> · "+
+    "Device: <strong>"+escapeHtml(d.deviceId||"—")+"</strong><br>"+
+    "Voltage: <strong>"+voltTxt+"</strong> · Time: "+escapeHtml(timeTxt);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function updateDeviceInfo(){
+  $("poleDisp").textContent    = "Pole " + (S.lastTelemetry?.pole || "—");
+  $("devIdDisp").textContent   = "Device ID: " + (S.lastTelemetry?.deviceId || "—");
+  $("headerDevice").textContent = S.lastTelemetry?.deviceId ? (S.lastTelemetry.pole + " · " + S.lastTelemetry.deviceId) : "No device";
+}
+
+function renderRegisteredLocation(){
+  const el = $("regLoc");
+  const loc = S.lastTelemetry?.location;
+  if (loc && loc.configured){
+    el.textContent = loc.latitude.toFixed(6) + ", " + loc.longitude.toFixed(6);
+  } else {
+    el.textContent = "Not configured.";
+  }
+}
+
+/* ---------- History ---------- */
+function loadHistory(){
+  try {
+    const raw = localStorage.getItem(HIST_KEY);
+    if (raw) S.history = JSON.parse(raw) || [];
+  } catch(_) { S.history = []; }
+  renderHistory();
+}
+
+function saveHistory(){
+  try { localStorage.setItem(HIST_KEY, JSON.stringify(S.history.slice(0,100))); } catch(_) {}
+}
+
+function addHistory(state, voltage, opts){
+  const d = S.lastTelemetry || {};
+  S.history.unshift({
+    state, voltage,
+    deviceId: d.deviceId || "",
+    pole: d.pole || "",
+    message: META[state]?.msg || "",
+    time: Date.now()
+  });
+  if (S.history.length > 100) S.history.length = 100;
+  saveHistory();
+  renderHistory();
+}
+
+function renderHistory(){
+  const ul = $("historyList");
+  if (!S.history.length){
+    ul.innerHTML = '<li class="muted">No recent alerts.</li>';
+    return;
+  }
+  ul.innerHTML = S.history.map(h => {
+    const m = META[h.state] || META.NODE_OFFLINE;
+    const when = new Date(h.time).toLocaleString();
+    return `<li>
+      <div class="h-state" style="color:${m.color}">${escapeHtml(m.label)}</div>
+      <div class="h-when">${escapeHtml(when)} · ${h.voltage != null ? h.voltage.toFixed(2)+" V" : "—"} · Pole ${escapeHtml(h.pole||"—")}</div>
+      <div>${escapeHtml(h.message)}</div>
+    </li>`;
+  }).join("");
+}
+
+function clearHistory(){
+  S.history = [];
+  saveHistory();
+  renderHistory();
+  toast("History cleared.");
+}
+
+function escapeCsvCell(v){ return '"'+String(v??"").replace(/"/g,'""')+'"'; }
+
+function exportCsv(){
+  if (!S.history.length){ toast("No history to export."); return; }
+  const rows = [["timestamp","state","voltage","deviceId","pole","message"]];
+  for (const h of S.history){
+    rows.push([new Date(h.time).toISOString(), h.state, h.voltage, h.deviceId, h.pole, h.message]);
+  }
+  const csv = rows.map(r => r.map(escapeCsvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "lineguard-history-" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("CSV exported.");
+}
+
+/* ---------- Alert text ---------- */
+function generalAreaLabel(){
+  const manual = $("manualArea").value.trim();
+  if (manual) return manual;
+  const g = (typeof geo !== "undefined") ? geo : null;
+  if (g && g.lat != null){
+    return `Approx. ${g.lat.toFixed(5)}, ${g.lon.toFixed(5)} (±${Math.round(g.accuracy)} m)`;
+  }
+  return "Not provided";
+}
+
+function registeredLocationLabel(){
+  const loc = S.lastTelemetry?.location;
+  if (loc && loc.configured) return `${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}`;
+  return "Not configured";
+}
+
+function buildAlertMessage(){
+  const d = S.lastTelemetry;
+  if (!d) return "LineGuard: no telemetry available.";
+  const m = META[d.state] || META.NODE_OFFLINE;
+  const v = (typeof d.voltage === "number") ? d.voltage.toFixed(2) : "—";
+  const t = new Date().toLocaleString();
+  return [
+    `LINEGUARD ALERT: ${m.label}`,
+    "",
+    `Pole: ${d.pole || "—"}`,
+    `Device ID: ${d.deviceId || "—"}`,
+    `Measured voltage: ${v} V`,
+    `Status: ${m.msg}`,
+    `General area: ${generalAreaLabel()}`,
+    `Registered pole location: ${registeredLocationLabel()}`,
+    `Time: ${t}`,
+    "",
+    "Recommended action: Inspect the monitored section using approved electrical safety procedures."
+  ].join("\n");
+}
+
+async function copyAlert(){
+  const msg = buildAlertMessage();
+  try { await navigator.clipboard.writeText(msg); toast("Alert copied."); }
+  catch(_) { toast("Copy failed. Select alert text manually."); }
+}
+
+async function shareAlert(){
+  const msg = buildAlertMessage();
+  if (navigator.share){
+    try { await navigator.share({ title:"LineGuard Alert", text: msg }); return; }
+    catch(e){ if (e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(msg); toast("Sharing unsupported. Alert copied instead."); }
+  catch(_) { toast("Share and copy both failed."); }
+}
+
+/* ---------- Geolocation ---------- */
+let geo = { lat:null, lon:null, accuracy:null };
+
+function requestArea(){
+  if (!navigator.geolocation){ $("areaStatus").textContent = "Geolocation not supported."; return; }
+  $("areaStatus").textContent = "Requesting permission…";
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      geo = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy };
+      $("areaStatus").textContent = `Approx. ${geo.lat.toFixed(5)}, ${geo.lon.toFixed(5)} (±${Math.round(geo.accuracy)} m). Accuracy varies.`;
+    },
+    (err) => {
+      $("areaStatus").textContent = "Permission denied or unavailable: " + err.message + ". Monitoring continues; enter area manually if needed.";
+    },
+    { enableHighAccuracy:false, timeout:8000, maximumAge:60000 }
+  );
+}
+
+function loadManualArea(){
+  try { $("manualArea").value = localStorage.getItem(AREA_KEY) || ""; } catch(_) {}
+}
+
+/* ---------- BLE ---------- */
+function attachDisconnectListener(device){
+  if (device._lgDisconnectAttached) return;
+  device._lgDisconnectAttached = true;
+  device.addEventListener("gattserverdisconnected", onDisconnected);
+}
+
+async function connect(){
+  if (!navigator.bluetooth){ toast("Web Bluetooth not available in this browser."); return; }
+  try {
+    setConnStatus("Requesting device…", "connecting");
+    $("connMsg").textContent = "Opening Bluetooth picker…";
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services:[SERVICE_UUID] }],
+      optionalServices: [SERVICE_UUID]
+    });
+    await attachAndRead(device);
+  } catch(err){
+    handleConnError(err);
+  }
+}
+
+async function reconnect(){
+  if (!S.device) return;
+  try {
+    setConnStatus("Reconnecting…", "connecting");
+    await attachAndRead(S.device);
+  } catch(err){
+    handleConnError(err);
+  }
+}
+
+async function attachAndRead(device){
+  S.device = device;
+  attachDisconnectListener(device);
+  const server = await device.gatt.connect();
+  const svc = await server.getPrimaryService(SERVICE_UUID);
+
+  S.server = server;
+  S.svc = svc;
+  S.deviceIdChar = await svc.getCharacteristic(CHAR_DEVICE_ID_UUID);
+  S.poleChar     = await svc.getCharacteristic(CHAR_POLE_UUID);
+  S.telemetryChar= await svc.getCharacteristic(CHAR_TELEMETRY_UUID);
+  S.configChar   = await svc.getCharacteristic(CHAR_CONFIG_UUID);
+
+  S.connected = true;
+  S.lastRecordedState = null;
+  $("btnConnect").disabled = true;
+  $("btnReconnect").disabled = true;
+  $("btnDisconnect").disabled = false;
+  setConnStatus("Connected", "connected");
+  $("connMsg").textContent = "Subscribing to telemetry…";
+
+  S.telemetryChar.addEventListener("characteristicvaluechanged", onNotification);
+  await S.telemetryChar.startNotifications();
+
+  $("connMsg").textContent = "Reading device identity…";
+  try {
+    const dv = await S.deviceIdChar.readValue();
+    const id = new TextDecoder().decode(dv).trim();
+    const pv = await S.poleChar.readValue();
+    const pole = new TextDecoder().decode(pv).trim();
+    $("poleDisp").textContent = "Pole " + pole;
+    $("devIdDisp").textContent = "Device ID: " + id;
+    $("headerDevice").textContent = pole + " · " + id;
+  } catch(_) {}
+
+  $("connMsg").textContent = "Connected. Waiting for first telemetry frame…";
+  toast("Connected.");
+}
+
+function onNotification(event){
+  const dv = event.target.value;
+  const bytes = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+  if (bytes.length < 4) return;
+  if (bytes[0] !== 0x01) return;
+
+  const msgId = bytes[1];
+  const seq   = bytes[2];
+  const total = bytes[3];
+  const payload = bytes.slice(4);
+
+  if (rx.msgId !== msgId){
+    rx.msgId = msgId; rx.total = total; rx.count = 0; rx.parts = new Array(total);
+  }
+  if (seq >= rx.total) return;
+  rx.parts[seq] = payload;
+  rx.count++;
+
+  if (rx.count >= rx.total){
+    let len = 0;
+    for (const p of rx.parts) len += p.length;
+    const merged = new Uint8Array(len);
+    let off = 0;
+    for (const p of rx.parts){ merged.set(p, off); off += p.length; }
+    const text = new TextDecoder().decode(merged);
+    rx.msgId = null; rx.total = 0; rx.count = 0; rx.parts = [];
+    try { handleTelemetry(JSON.parse(text)); }
+    catch(e){ console.warn("Bad JSON", text); }
+  }
+}
+
+function onDisconnected(){
+  S.connected = false;
+  clearTimeout(S.staleTimer);
+  S.staleTimer = null;
+  setConnStatus("Disconnected", "disconnected");
+  $("connMsg").textContent = "BLE disconnected. Last known reading retained but marked stale.";
+  $("btnConnect").disabled = false;
+  $("btnReconnect").disabled = !S.device;
+  $("btnDisconnect").disabled = true;
+  setStateBadge("NODE_OFFLINE", "BLE disconnected");
+  setVoltage(null, true);
+  setAlertPanel("NODE_OFFLINE", null);
+  $("lastUpdate").textContent = "—";
+  S.lastRecordedState = "NODE_OFFLINE";
+}
+
+function handleConnError(err){
+  console.error(err);
+  setConnStatus("Disconnected", "error");
+  $("connMsg").textContent = "Connection failed: " + (err.message || err);
+}
+
+async function disconnect(){
+  if (S.device && S.device.gatt.connected) S.device.gatt.disconnect();
+}
+
+/* ---------- Telemetry ---------- */
+function handleTelemetry(d){
+  S.lastTelemetry = d;
+  S.lastTelemetryAt = Date.now();
+  clearTimeout(S.staleTimer);
+  S.staleTimer = setTimeout(onStale, STALE_MS);
+
+  $("rawJson").textContent = JSON.stringify(d, null, 2);
+  $("lastUpdate").textContent = new Date(S.lastTelemetryAt).toLocaleTimeString();
+
+  const volt = (typeof d.voltage === "number") ? d.voltage : null;
+  setVoltage(volt, false);
+  setStateBadge(d.state || "NODE_OFFLINE", d.state === "NORMAL" ? "Normal" : (d.event || ""));
+  setAlertPanel(d.state || "NODE_OFFLINE", volt, d.stateChangedAtMs ? (Date.now() - (d.uptimeMs - d.stateChangedAtMs)) : null);
+
+  updateDeviceInfo();
+  renderRegisteredLocation();
+
+  // Config form population on HELLO / CONFIG
+  if ((d.event === "HELLO" || d.event === "CONFIG") && d.config){
+    $("cDev").value  = d.deviceId || "";
+    $("cPole").value = d.pole || "";
+    $("cCal").value  = d.config.cal ?? 1.0;
+    $("cVn").value   = d.config.vNormal ?? 10.0;
+    $("cVw").value   = d.config.vWarning ?? 8.0;
+    $("cVc").value   = d.config.vCritical ?? 1.0;
+    $("cHys").value  = d.config.hysteresis ?? 0.3;
+    $("cDeb").value  = d.config.debounceMs ?? 3000;
+    if (d.location && d.location.configured){
+      $("cLat").value = d.location.latitude;
+      $("cLon").value = d.location.longitude;
+    }
+  }
+
+  if (d.event === "CONFIG"){
+    $("cfgStatus").textContent = "Configuration confirmed by device.";
+  }
+
+  // Record state change
+  if (d.state && d.state !== S.lastRecordedState){
+    if (d.event === "STATE_CHANGE" || (S.lastRecordedState === null && d.state !== "NORMAL")){
+      addHistory(d.state, volt);
+    }
+    S.lastRecordedState = d.state;
+  }
+}
+
+function onStale(){
+  if (!S.connected) return;
+  setStateBadge("NODE_OFFLINE", "No data for " + (STALE_MS/1000) + " s");
+  setVoltage(null, true);
+  setAlertPanel("NODE_OFFLINE", null);
+  $("lastUpdate").textContent = "Stale — no fresh telemetry.";
+}
+
+/* ---------- Config write ---------- */
+async function applyConfig(){
+  if (!S.configChar || !S.connected){ $("cfgStatus").textContent = "Not connected."; return; }
+  if (!$("cConfirm").checked){ $("cfgStatus").textContent = "Tick the confirmation box first."; return; }
+
+  const payload = {
+    commit: true,
+    deviceId: $("cDev").value.trim(),
+    pole: $("cPole").value.trim(),
+    calibrationFactor: parseFloat($("cCal").value),
+    vNormal:   parseFloat($("cVn").value),
+    vWarning:  parseFloat($("cVw").value),
+    vCritical: parseFloat($("cVc").value),
+    hysteresisV: parseFloat($("cHys").value),
+    debounceMs: parseInt($("cDeb").value, 10)
+  };
+  if ($("cLat").value && $("cLon").value){
+    payload.latitude = parseFloat($("cLat").value);
+    payload.longitude = parseFloat($("cLon").value);
+  }
+
+  try {
+    const enc = new TextEncoder().encode(JSON.stringify(payload));
+    await S.configChar.writeValueWithResponse(enc);
+    $("cfgStatus").textContent = "Configuration sent. Awaiting CONFIG telemetry event…";
+    setTimeout(async () => {
+      try {
+        const dv = await S.configChar.readValue();
+        const ack = JSON.parse(new TextDecoder().decode(dv));
+        $("cfgStatus").textContent = ack.ok ? "Configuration saved successfully." : ("Rejected: " + (ack.error||"?"));
+      } catch(_) { /* telemetry CONFIG event is the source of truth */ }
+    }, 700);
+  } catch(e){
+    $("cfgStatus").textContent = "Write failed: " + e.message;
+  }
+}
+
+async function clearRegisteredLocation(){
+  if (!S.configChar || !S.connected){ $("cfgStatus").textContent = "Not connected."; return; }
+  if (!$("cConfirm").checked){ $("cfgStatus").textContent = "Tick the confirmation box first."; return; }
+  try {
+    const enc = new TextEncoder().encode(JSON.stringify({ commit:true, clearLocation:true }));
+    await S.configChar.writeValueWithResponse(enc);
+    $("cfgStatus").textContent = "Clear-location request sent.";
+  } catch(e){
+    $("cfgStatus").textContent = "Failed: " + e.message;
+  }
+}
+
+/* ---------- Wire up ---------- */
+document.addEventListener("DOMContentLoaded", () => {
+  // Environment check
+  if (!window.isSecureContext){
+    setConnStatus("Insecure", "error");
+    $("connMsg").textContent = "Page must be served over HTTPS or localhost.";
+    $("btnConnect").disabled = true;
+  } else if (!navigator.bluetooth){
+    setConnStatus("No Web Bluetooth", "error");
+    $("connMsg").textContent = "Web Bluetooth unavailable. Use Chrome/Edge on Android or desktop.";
+    $("btnConnect").disabled = true;
+  } else {
+    $("connMsg").textContent = "Ready. Tap Connect and choose your LineGuard node.";
+  }
+
+  loadHistory();
+  loadManualArea();
+  $("manualArea").addEventListener("input", () => {
+    try { localStorage.setItem(AREA_KEY, $("manualArea").value); } catch(_) {}
+  });
+
+  $("btnConnect").addEventListener("click", connect);
+  $("btnReconnect").addEventListener("click", reconnect);
+  $("btnDisconnect").addEventListener("click", disconnect);
+  $("btnArea").addEventListener("click", requestArea);
+  $("btnCopy").addEventListener("click", copyAlert);
+  $("btnShare").addEventListener("click", shareAlert);
+  $("btnClearHist").addEventListener("click", clearHistory);
+  $("btnExportCsv").addEventListener("click", exportCsv);
+  $("btnApply").addEventListener("click", applyConfig);
+  $("btnClearLoc").addEventListener("click", clearRegisteredLocation);
+
+  setStateBadge("NODE_OFFLINE", "No data");
+  setVoltage(null, true);
+  setAlertPanel("NODE_OFFLINE", null);
+});
+</script>
+</body>
+</html>
